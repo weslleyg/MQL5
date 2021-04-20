@@ -6,16 +6,28 @@
 #property copyright "Copyright 2019, Weslley."
 #property link      "https://github.com/weslleyg"
 #property version   "1.00"
+#property indicator_buffers 2
 
 #include <Trade\Trade.mqh>
 CTrade trade;
 
 MqlRates rates[];
 
+double   iMA9Buffer[];
+double   iMA80Buffer[];
+
+int      iMA9Handle;
+int      iMA80Handle;
+
 int OnInit()
 {
 
    ArraySetAsSeries(rates,true);
+   SetIndexBuffer(0, iMA80Buffer, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(1, iMA9Buffer, INDICATOR_CALCULATIONS);
+   
+   iMA9Handle = iMA(_Symbol, _Period, 9, 0, MODE_SMA, PRICE_CLOSE);
+   iMA80Handle = iMA(_Symbol, _Period, 80, 0, MODE_SMA, PRICE_CLOSE);
    
    return(INIT_SUCCEEDED);
 }
@@ -33,6 +45,9 @@ void OnTick()
    bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    last = SymbolInfoDouble(_Symbol, SYMBOL_LAST);
    
+   CopyBuffer(iMA9Handle, 0, 0, 3, iMA9Buffer);
+   CopyBuffer(iMA80Handle, 0, 0, 3, iMA80Buffer);
+   
    int copyR = CopyRates(_Symbol,_Period,0,4,rates);
    
    low = rates[1].low;
@@ -41,12 +56,21 @@ void OnTick()
    
    if(!isPFR()) 
    {
-      Print("Não tem sinal");
+      Print(_Symbol[3]);
    } else {
-      if(copyR > 0 && PositionsTotal() == 0) 
+      if(_Symbol[3] == 74) 
       {
-         Print("Tem sinal");
-         trade.Buy(0.1, _Symbol, ask, low, tp, "");  
+         if(copyR > 0 && last >= rates[1].high && last <= rates[1].high + 0.001 && PositionsTotal() == 0 && last > iMA9Buffer[0] && last > iMA80Buffer[0]) 
+         {
+            Print("Tem sinal ");
+            trade.Buy(1, _Symbol, ask, low, tp, "");  
+         }
+      }
+      
+      if(copyR > 0 && last >= rates[1].high && last <= rates[1].high + 0.00001 && PositionsTotal() == 0 && last > iMA9Buffer[0] && last > iMA80Buffer[0]) 
+      {
+         Print("Tem sinal ");
+         trade.Buy(1, _Symbol, ask, low, tp, "");  
       }
    }
 }
