@@ -39,7 +39,7 @@ void OnDeinit(const int reason)
 
 void OnTick()
 {
-   double ask, bid, last, low, tp;
+   double ask, bid, last, low, high, tp1, tp2;
    
    ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
@@ -51,31 +51,54 @@ void OnTick()
    int copyR = CopyRates(_Symbol,_Period,0,4,rates);
    
    low = rates[1].low;
+   high = rates[1].high;
    
-   tp = rates[1].high + ((rates[1].high - rates[1].low) * 2);
+   tp1 = rates[1].high + ((rates[1].high - rates[1].low) * 2);
+   tp2 = rates[1].low - ((rates[1].high - rates[1].low) * 2);
    
-   if(!isPFR()) 
+   if(isPFR() == 0) 
    {
-      Print(_Symbol[3]);
+      Print(isPFR());
    } else {
       if(_Symbol[3] == 74) 
       {
-         if(copyR > 0 && last >= rates[1].high && last <= rates[1].high + 0.001 && PositionsTotal() == 0 && last > iMA9Buffer[0] && last > iMA80Buffer[0]) 
+         if(copyR > 0 && isPFR() == 1 && last >= rates[1].high && last <= rates[1].high + 0.001 && PositionsTotal() == 0 && last > iMA9Buffer[0] && last > iMA80Buffer[0]) 
          {
-            Print("Tem sinal ");
-            trade.Buy(1, _Symbol, ask, low, tp, "");  
+            Print("Tem compra ");
+            trade.Buy(1, _Symbol, ask, low, 0, "");  
+         } else if(copyR > 0 && isPFR() == 2 && last <= rates[1].low && last >= rates[1].low - 0.001 && PositionsTotal() == 0 && last < iMA9Buffer[0] && last < iMA80Buffer[0])
+         {
+            Print("Tem venda ");
+            trade.Sell(1, _Symbol, bid, high, 0, ""); 
          }
       }
       
-      if(copyR > 0 && last >= rates[1].high && last <= rates[1].high + 0.00001 && PositionsTotal() == 0 && last > iMA9Buffer[0] && last > iMA80Buffer[0]) 
+      if(copyR > 0 && isPFR() == 1 && last >= rates[1].high && last <= rates[1].high + 0.00001 && PositionsTotal() == 0 && last > iMA9Buffer[0] && last > iMA80Buffer[0]) 
       {
-         Print("Tem sinal ");
-         trade.Buy(1, _Symbol, ask, low, tp, "");  
+         Print("Tem compra ");
+         trade.Buy(1, _Symbol, ask, low, 0, "");  
+      } else if(copyR > 0 && isPFR() == 2 && last <= rates[1].low && last >= rates[1].low - 0.00001 && PositionsTotal() == 0 && last < iMA9Buffer[0] && last < iMA80Buffer[0])
+      {
+         Print("Tem venda ");
+         trade.Sell(1, _Symbol, bid, high, 0, ""); 
+      }
+   }
+   
+   if(PositionSelect(_Symbol) == true)
+   {
+      if(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
+      {
+         if(rates[1].close < iMA9Buffer[0])
+         {
+            trade.PositionModify(_Symbol, rates[1].low, 0);
+         }
+      } else if(rates[1].close > iMA9Buffer[0]) {
+         trade.PositionModify(_Symbol, rates[1].high, 0);
       }
    }
 }
 
-bool isPFR()
+int isPFR()
 {
    
    int copyR = CopyRates(_Symbol,_Period,0,4,rates);
@@ -87,9 +110,15 @@ bool isPFR()
          && rates[1].close > rates[2].close
          && rates[1].low < rates[0].low)
       {  
-         return true;
+         return 1;
+      } else if(rates[1].high > rates[2].high
+                && rates[1].high > rates[3].high
+                && rates[1].close < rates[2].close
+                && rates[1].high > rates[0].high) 
+      {
+            return 2;
       }
    } else Alert("Falha ao receber dados históricos para o símbolo ",_Symbol);
    
-   return false;
+   return 0;
 }
