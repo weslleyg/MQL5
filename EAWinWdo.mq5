@@ -8,29 +8,33 @@
 #property version   "1.00"
 
 #include <Trade\Trade.mqh>
+CTrade trade;
 
 MqlRates rates[];
 
 double               iMABuffer[];
-int                  iMAHandle[];
+int                  iMAHandle;
+ 
+int count = 0, quantity = 1;
 
 //+------------------------------------------------------------------+
 //| Expert initialization variables                                   |
 //+------------------------------------------------------------------+
 
 input group          "Media Movel"
-input int            MA_Period=13;
+input int            MA_Period=9;
 input int            MA_Shift=0;
 input ENUM_MA_METHOD MA_Method=MODE_SMA;
 
 input group          "Stop Loss/Take Profit"
-input int            SL_TP=20;
+input int            SL=20;
+input int            TP=20;
 
 input group          "Martingale"
-input double         Fator_Martingale=1.92;
+input double         Fator_Martingale=2;
 
 input group          "Attempts"
-input int            Attempts=1;
+input int            Attempts=6;
 
 input group          "Pause"
 input double         Init_Pause=00.01;
@@ -63,6 +67,52 @@ void OnDeinit(const int reason)
 void OnTick()
   {
 //---
+   double ask, bid, last;
    
+   ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   last = SymbolInfoDouble(_Symbol, SYMBOL_LAST);
+   
+   if(OnTrend())
+    {
+      if(PositionsTotal() == 0)
+      {
+       if(count >= 1 && count != Attempts) {
+         quantity = quantity * Fator_Martingale;
+         trade.Sell(quantity,_Symbol, bid, (SL + last), (last - TP), "");
+         count++;
+       } else if(count != Attempts) {
+         trade.Sell(quantity,_Symbol, bid, (SL + last), (last - TP), "");
+         count++;
+       }
+      }
+    } else {
+      if(PositionsTotal() == 0)
+       {
+         if(count >= 1 && count != Attempts) {
+            quantity = quantity * Fator_Martingale;
+            trade.Buy(quantity, _Symbol, ask, (SL - last), (last + TP), "");
+            count++;
+         } else if(count != Attempts) {
+            trade.Buy(quantity, _Symbol, ask, (SL - last), (last + TP), "");
+            count++;
+         }
+       }
+    }
+    
   }
 //+------------------------------------------------------------------+
+
+bool OnTrend()
+  {
+   double last = SymbolInfoDouble(_Symbol, SYMBOL_LAST);
+   
+   CopyBuffer(iMAHandle, 0, 0, 3, iMABuffer);  
+   
+   if(last > iMABuffer[0]) 
+    {
+     return true;
+    }
+    
+    return false;
+  }
