@@ -14,8 +14,11 @@ MqlRates rates[];
 
 double               iMABuffer[];
 int                  iMAHandle;
- 
-int count = 0, quantity = 1;
+
+int tmp = 0;
+int count = 0, quantity = 1, totalVol = 1;
+
+datetime tm, ftm;
 
 //+------------------------------------------------------------------+
 //| Expert initialization variables                                   |
@@ -37,8 +40,7 @@ input group          "Attempts"
 input int            Attempts=6;
 
 input group          "Pause"
-input double         Init_Pause=00.01;
-input double         Stop_Pause=24.00;
+input double         TradeP=0.30;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -51,8 +53,14 @@ int OnInit()
    
    iMAHandle = iMA(_Symbol, _Period, MA_Period, MA_Shift, MA_Method, PRICE_CLOSE);
    
-   if(getProfit() < 0) {
-      count = -1;
+   if(TradeP < 1) {
+     tmp = ((TradeP * 100) * 60); 
+   } else {
+     tmp = TradeP * 3600;
+   }
+   
+   for(uint i = 0; i < Attempts; i++) {
+      totalVol = totalVol * Fator_Martingale;
    }
 //---
    return(INIT_SUCCEEDED);
@@ -75,20 +83,34 @@ void OnTick()
    ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    last = SymbolInfoDouble(_Symbol, SYMBOL_LAST);
+   
+   if(count == Attempts && getProfit() < 0) {
+      count++;
+      tm = TimeCurrent();
+      ftm = tm + tmp;
+      Print("Pause: "+tm+" Proceed: "+ ftm);
+   }
      
    if(OnTrend())
     {
       if(PositionsTotal() == 0)
       {
+       if(ftm == TimeCurrent()) {
+         quantity = 1;
+         count = 0;
+       }
        if(getProfit() < 0) {
          if(count < Attempts) {
             count++;
          }
-         if(count >= 1 && count != Attempts) {
+         if(count >= 1 && count != Attempts && count < Attempts) {
             quantity = quantity * Fator_Martingale;
+            if(quantity > totalVol) {
+               quantity = 1;
+            }
             trade.Sell(quantity,_Symbol, bid, (last + SL), (last - TP), "");
          }
-       } else if(count != Attempts) {
+       } else if(count != Attempts && count <= Attempts) {
           count = 0;
           quantity = 1;
           trade.Sell(quantity,_Symbol, bid, (last + SL), (last - TP), "");
@@ -97,16 +119,23 @@ void OnTick()
     } else {
       if(PositionsTotal() == 0)
        {
+         if(ftm == TimeCurrent()) {
+            quantity = 1;
+            count = 0;
+         }
          if(getProfit() < 0) {
              if(count < Attempts) {
                count++;
              }
-             if(count >= 1 && count != Attempts) {
+             if(count >= 1 && count != Attempts && count < Attempts) {
                quantity = quantity * Fator_Martingale;
+               if(quantity > totalVol) {
+                  quantity = 1;
+               }
                trade.Buy(quantity, _Symbol, ask, (last - SL), (last + TP), "");
             }
          }
-         else if(count != Attempts) {
+         else if(count != Attempts && count < Attempts) {
             count = 0;
             quantity = 1;
             trade.Buy(quantity, _Symbol, ask, (last - SL), (last + TP), "");
