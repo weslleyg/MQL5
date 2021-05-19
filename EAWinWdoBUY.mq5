@@ -105,3 +105,44 @@ bool OnTrend()
 
     return false;
 }
+
+int getProfit()
+{
+    HistorySelect(0, TimeCurrent());
+    //--- cria objetos
+    uint total = HistoryDealsTotal();
+    ulong ticket = 0;
+    double profit;
+    string symbol;
+
+    if (PositionsTotal() == 1)
+    {
+        if ((ticket = HistoryDealGetTicket(total - 2)) > 0)
+        {
+            //--- obter as propriedades negócios
+            symbol = HistoryDealGetString(ticket, DEAL_SYMBOL);
+            profit = HistoryDealGetDouble(ticket, DEAL_PROFIT);
+
+            if (symbol == Symbol())
+            {
+                return profit;
+            }
+        }
+    }
+    else if (PositionsTotal() == 0)
+    {
+        if ((ticket = HistoryDealGetTicket(total - 1)) > 0)
+        {
+            //--- obter as propriedades negócios
+            symbol = HistoryDealGetString(ticket, DEAL_SYMBOL);
+            profit = HistoryDealGetDouble(ticket, DEAL_PROFIT);
+
+            if (symbol == Symbol())
+            {
+                return profit;
+            }
+        }
+    }
+
+    return 1;
+}
