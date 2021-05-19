@@ -123,37 +123,37 @@ void OnTick()
                 trade.Buy(quantity, _Symbol, ask, (last - SL), (last + TP), "");
             }
         }
-        else
+    }
+    else
+    {
+        if (PositionsTotal() == 0)
         {
-            if (PositionsTotal() == 0)
+            if (ftm == TimeCurrent())
             {
-                if (ftm == TimeCurrent())
+                quantity = 1;
+                count = 0;
+            }
+            if (getProfit() < 0)
+            {
+                if (count < Attempts)
                 {
-                    quantity = 1;
-                    count = 0;
+                    count++;
                 }
-                if (getProfit() < 0)
+                if (count >= 1 && count != Attempts && count < Attempts)
                 {
-                    if (count < Attempts)
+                    quantity = quantity * Fator_Martingale;
+                    if (quantity > totalVol)
                     {
-                        count++;
+                        quantity = 1;
                     }
-                    if (count >= 1 && count != Attempts && count < Attempts)
-                    {
-                        quantity = quantity * Fator_Martingale;
-                        if (quantity > totalVol)
-                        {
-                            quantity = 1;
-                        }
-                        trade.Sell(quantity, _Symbol, bid, (last + SL), (last - TP), "");
-                    }
-                }
-                else if (count != Attempts && count <= Attempts)
-                {
-                    count = 0;
-                    quantity = 1;
                     trade.Sell(quantity, _Symbol, bid, (last + SL), (last - TP), "");
                 }
+            }
+            else if (count != Attempts && count <= Attempts)
+            {
+                count = 0;
+                quantity = 1;
+                trade.Sell(quantity, _Symbol, bid, (last + SL), (last - TP), "");
             }
         }
     }
